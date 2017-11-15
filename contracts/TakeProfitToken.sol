@@ -6,10 +6,10 @@ import "./Haltable.sol";
 contract TakeProfitToken is Token, Haltable {
 
 
-    string constant public name = "t";//"TakeProfit";
+    string constant public name = "TakeProfit";
     uint8 constant public decimals = 8;
-    string constant public symbol = "3";//"TP";       
-    string constant public version = "1.0";
+    string constant public symbol = "TP";       
+    string constant public version = "1.1";
 
 
     uint256 constant private UNIT = uint256(10)**decimals;
