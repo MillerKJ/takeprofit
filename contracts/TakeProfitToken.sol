@@ -2,8 +2,10 @@ pragma solidity ^0.4.8;
 
 import "./Token.sol";
 import "./Haltable.sol";
+import './SafeMath.sol';
 
 contract TakeProfitToken is Token, Haltable {
+    using SafeMath for uint256;
 
 
     string constant public name = "TakeProfit";
@@ -23,20 +25,22 @@ contract TakeProfitToken is Token, Haltable {
 
 
     function transfer(address _to, uint256 _value) public stopInEmergency returns (bool success) {
+        require(_to != address(0));
         require(balances[msg.sender] >= _value);
-        balances[msg.sender] -= _value;
-        balances[_to] += _value;
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[_to] = balances[_to].add(_value);
         Transfer(msg.sender, _to, _value);
         return true;
     }
 
     function transferFrom(address _from, address _to, uint256 _value) public stopInEmergency returns (bool success) {
+        require(_to != address(0));
         uint256 allowance = allowed[_from][msg.sender];
         require(balances[_from] >= _value && allowance >= _value);
-        balances[_to] += _value;
-        balances[_from] -= _value;
+        balances[_to] = balances[_to].add(_value);
+        balances[_from] = balances[_from].sub(_value);
         if (allowance < MAX_UINT256) {
-            allowed[_from][msg.sender] -= _value;
+            allowed[_from][msg.sender] = allowance.sub(_value);
         }
         Transfer(_from, _to, _value);
         return true;
