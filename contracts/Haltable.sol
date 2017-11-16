@@ -9,7 +9,7 @@ pragma solidity ^0.4.6;
 import "./Ownable.sol";
 
 contract Haltable is Ownable {
-  bool public halted;
+  bool public halted = false;
 
   modifier stopInEmergency {
     require(!halted);
