@@ -64,9 +64,9 @@ contract Presale is Haltable {
 
   function initiate() public onlyOwner {
     require(token.balanceOf(this) >= uint256(10)**(6+8));
+    initiated = true;
     if(token.balanceOf(this)>uint256(10)**(6+8))
       require(token.transfer(withdrawAddress, token.balanceOf(this).sub(uint256(10)**(6+8))));
-    initiated = true;
   }
 
   // fallback function can be used to buy tokens
@@ -124,21 +124,18 @@ contract Presale is Haltable {
     require(purchasedTokens[beneficiary]>0);
     uint256 value = purchasedTokens[beneficiary];
     purchasedTokens[beneficiary] -= value;
-    token.transfer(beneficiary, value);
+    require(token.transfer(beneficiary, value));
   }
 
   function refund() public stopInEmergency inState(State.Refunding) {
-    require(receivedFunds[msg.sender]>0);
-    uint256 value = receivedFunds[msg.sender];
-    receivedFunds[msg.sender] -= value;
-    require(msg.sender.send(value));
+    delegatedRefund(msg.sender);
   }
 
   function delegatedRefund(address beneficiary) public stopInEmergency inState(State.Refunding) {
     require(receivedFunds[beneficiary]>0);
     uint256 value = receivedFunds[beneficiary];
-    receivedFunds[beneficiary] -= value;
-    require(beneficiary.send(value));
+    receivedFunds[beneficiary] = 0;
+    beneficiary.transfer(value);
   }
 
   function finalize() public inState(State.Success) onlyOwner stopInEmergency {
@@ -152,7 +149,7 @@ contract Presale is Haltable {
   }
 
   function emergencyTokenWithdrawal(uint256 _amount) public onlyOwner onlyInEmergency {
-    token.transfer(withdrawAddress, _amount);
+    require(token.transfer(withdrawAddress, _amount));
   }
 
   //It is function and not variable, thus it can't be stale
@@ -166,7 +163,6 @@ contract Presale is Haltable {
     else return State.Failure;
   }
 
-  /** Modified allowing execution only if the Presale is currently running.  */
   modifier inState(State state) {
     require(getState() == state);
     _;
