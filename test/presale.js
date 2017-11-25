@@ -60,8 +60,8 @@ contract('Presale', function(accounts) {
   let nonowner2 = accounts[4];
   let nonowner3 = accounts[5];
 
-  let start_time = 1511287200;
-  let finish_time = 1513814400;
+  let start_time = 1511892000; // 28 November 6 pm
+  let finish_time = 1513641600; // 19 December
   let rate = 1e6*1e8/(2e3*1e18);
 
   var token, presale;
