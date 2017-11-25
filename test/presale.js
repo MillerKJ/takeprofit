@@ -105,18 +105,18 @@ contract('Presale', function(accounts) {
 
   it("should not allow initialisation for non-owner", async function() {
     await revertToSnapshot(compiled_snapshot);
-    await token.transfer(presale.address, 100000000000000,{from: token_owner});
-    await expectThrow(presale.initiate({from:nonowner1})); //still not enough
+    await token.transfer(presale.address, 100*1e6*1e8,{from: token_owner});
+    await expectThrow(presale.initiate({from:nonowner1}));
   });
 
   it("should return excess of tokens to withdrawer", async function() {
     await revertToSnapshot(compiled_snapshot);
-    await token.transfer(presale.address, 100000000000010,{from: token_owner});
+    await token.transfer(presale.address, (new web3.BigNumber(10*1e6*1e8)).plus(10),{from: token_owner});
     await presale.initiate({from:owner});
     initialised_snapshot = await getSnapshot();
 
     assert.equal(await presale.getState.call(), 2, "Incorrectly determined state");
-    assert.equal(await token.balanceOf.call(withdrawer), 10, "Incorrectly return excesses to withdrawer");
+    assert.equal((await token.balanceOf.call(withdrawer)).toNumber(), 10, "Incorrectly return excesses to withdrawer");
   });
 
   it("should correctly pass to prefunding", async function() {

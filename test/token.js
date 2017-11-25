@@ -4,10 +4,10 @@ require('babel-polyfill');
 var TPToken = artifacts.require("./TakeProfitToken.sol");
 
 contract('TakeProfitToken', function(accounts) {
-  it("should put 1e7 TP in the owner account", async function() {
+  it("should put 100m TP in the owner account", async function() {
     var token = await TPToken.new();
     var balance = await token.balanceOf.call(accounts[0]);
-    assert.equal(balance.valueOf(), 1e7*1e8, "10 000 000 wasn't in the owner account");
+    assert.equal(balance.valueOf(), 100*1e6*1e8, "100 000 000 wasn't in the owner account");
   });
   
   it("should send coin correctly", async function() {

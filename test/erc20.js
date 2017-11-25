@@ -8,33 +8,35 @@ var TPToken = artifacts.require("./TakeProfitToken.sol");
 contract('TakeProfitToken(ERC20 checks)', function(accounts) {
 
   let token;
+  let totalSupply = 100*1e6*1e8; //100 milions tokens
 
   beforeEach(async function() {
     token = await TPToken.new();
   });
 
-  it("should put 1e7 TP in the owner account", async function() {
+  it("should put 1e8 TP in the owner account", async function() {
     var token = await TPToken.new();
     var balance = await token.balanceOf.call(accounts[0]);
-    assert.equal(balance.valueOf(), 1e7*1e8, "10 000 000 wasn't in the owner account");
+    assert.equal(balance.valueOf(), totalSupply, "100 000 000 wasn't in the owner account");
   });
 
 
   it("should return the correct totalSupply after construction", async function() {
     let totalSupply = await token.totalSupply();
-    assert.equal(totalSupply, 1e7*1e8, "Total supply isn't equal to 10 000 000");
+    assert.equal(totalSupply, totalSupply, "Total supply isn't equal to 100 000 000");
   })
 
   it("should return correct balances after transfer", async function(){
-    let transfer = await token.transfer(accounts[1], 1e7*1e8, {from: accounts[0]});
+    let transfer = await token.transfer(accounts[1], totalSupply, {from: accounts[0]});
     let firstAccountBalance = await token.balanceOf(accounts[0]);
     assert.equal(firstAccountBalance, 0);
     let secondAccountBalance = await token.balanceOf(accounts[1]);
-    assert.equal(secondAccountBalance, 1e7*1e8);
+    assert.equal(secondAccountBalance, totalSupply);
   });
 
   it('should throw an error when trying to transfer more than balance', async function() {
-    await expectThrow(token.transfer(accounts[1], 1e7*1e8+1, {from: accounts[0]}));
+    var balance = await token.balanceOf.call(accounts[0]);
+    await expectThrow(token.transfer(accounts[1], balance.plus(1), {from: accounts[0]}));
   });
 
   it('should throw an error when trying to transfer to 0x0', async function() {
@@ -52,7 +54,7 @@ contract('TakeProfitToken(ERC20 checks)', function(accounts) {
     await token.transferFrom(accounts[0], accounts[2], 100, {from: accounts[1]});
 
     let balance0 = await token.balanceOf(accounts[0]);
-    assert.equal(balance0, 1e7*1e8-100);
+    assert.equal(balance0, totalSupply-100);
 
     let balance1 = await token.balanceOf(accounts[2]);
     assert.equal(balance1, 100);
