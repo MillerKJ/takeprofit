@@ -10,12 +10,12 @@ contract TakeProfitToken is Token, Haltable {
 
     string constant public name = "TakeProfit";
     uint8 constant public decimals = 8;
-    string constant public symbol = "TP";       
+    string constant public symbol = "XTP";       
     string constant public version = "1.1";
 
 
-    uint256 constant private UNIT = uint256(10)**decimals;
-    uint256 public totalSupply = 10**7 * UNIT;
+    uint256 constant public UNIT = uint256(10)**decimals;
+    uint256 public totalSupply = 10**8 * UNIT;
 
     uint256 constant MAX_UINT256 = 2**256 - 1; // Used for allowance: this value mean infinite allowance
 
