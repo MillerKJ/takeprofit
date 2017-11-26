@@ -7,7 +7,9 @@ contract('TakeProfitToken', function(accounts) {
   it("should put 100m TP in the owner account", async function() {
     var token = await TPToken.new();
     var balance = await token.balanceOf.call(accounts[0]);
-    assert.equal(balance.valueOf(), 100*1e6*1e8, "100 000 000 wasn't in the owner account");
+    assert.equal(await token.decimals.call(), 8, "Incorrect decimals");
+    assert.equal(await token.UNIT.call(), 1e8, "Incorrect UNIT");
+    assert.equal(balance.valueOf(), 100*1e6*(await token.UNIT.call()), "100 000 000 wasn't in the owner account");
   });
   
   it("should send coin correctly", async function() {
@@ -60,6 +62,13 @@ contract('TakeProfitToken', function(accounts) {
 
       assert.equal(balance_final_0, balance_initial_0 - amount, "Amount wasn't correctly taken from the sender");
       assert.equal(balance_final_1, balance_initial_1 + amount, "Amount wasn't correctly sent to the receiver");
+  });
+
+  it("should have correct name and ticker", async function() {
+      var token = await TPToken.new();
+
+      assert.equal(await token.name.call(), "TakeProfit", "Incorrect name");
+      assert.equal(await token.symbol.call(), "XTP", "Incorrect ticker");
   });
 
 });
