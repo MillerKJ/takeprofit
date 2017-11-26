@@ -15,7 +15,7 @@ contract TakeProfitToken is Token, Haltable {
 
 
     uint256 constant private UNIT = uint256(10)**decimals;
-    uint256 public totalSupply = 10**7 * UNIT;
+    uint256 public totalSupply = 10**8 * UNIT;
 
     uint256 constant MAX_UINT256 = 2**256 - 1; // Used for allowance: this value mean infinite allowance
 

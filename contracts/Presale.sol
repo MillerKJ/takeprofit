@@ -19,19 +19,22 @@ contract Presale is Haltable {
   Token public token;
 
   // start and end timestamps where investments are allowed (both inclusive)
-  uint256 constant public startTime = 1511287200; // 21 Nov 2017 @ 18:00   (UTC)
-  uint256 constant public endTime =   1513814400; // 21 Dec 2017 @ 12:00am (UTC)
+  uint256 constant public startTime = 1511892000; // 28 Nov 2017 @ 18:00   (UTC)
+  uint256 constant public endTime =   1513641600; // 19 Dec 2017 @ 12:00am (UTC)
 
-  uint256 constant public cap = 2000 ether;
+  uint256 constant public tokenCap = uint256(10*1e6*1e8);
 
   // address where funds will be transfered
   address public withdrawAddress;
 
   // how many weis buyer need to pay for one token unit
-  uint256 public rate = 20000000;
+  uint256 public default_rate = 2000000;
 
   // amount of raised money in wei
   uint256 public weiRaised;
+
+  // amount of already sold tokens
+  uint256 public tokenSold;
 
   bool public initiated = false;
   bool public finalized = false;
@@ -54,19 +57,20 @@ contract Presale is Haltable {
   function Presale(address token_address, address _withdrawAddress) public {
     require(startTime >= now);
     require(endTime >= startTime);
-    require(rate > 0);
+    require(default_rate > 0);
     require(withdrawAddress == address(0));
     require(_withdrawAddress != address(0));
-    require(cap>0);
+    require(tokenCap>0);
     token = Token(token_address);
+    require(token.totalSupply()==100*uint256(10)**(6+8));
     withdrawAddress = _withdrawAddress;
   }
 
   function initiate() public onlyOwner {
-    require(token.balanceOf(this) >= uint256(10)**(6+8));
+    require(token.balanceOf(this) >= 10*uint256(10)**(6+8));
     initiated = true;
-    if(token.balanceOf(this)>uint256(10)**(6+8))
-      require(token.transfer(withdrawAddress, token.balanceOf(this).sub(uint256(10)**(6+8))));
+    if(token.balanceOf(this)>10*uint256(10)**(6+8))
+      require(token.transfer(withdrawAddress, token.balanceOf(this).sub(10*uint256(10)**(6+8))));
   }
 
   // fallback function can be used to buy tokens
@@ -80,21 +84,25 @@ contract Presale is Haltable {
     require(validPurchase());
 
     uint256 weiAmount = msg.value;
+    uint256 weiAmountConsumed = 0;
     uint256 weiExcess = 0;
 
-    if(weiRaised.add(weiAmount)>cap) {
-      weiExcess = weiRaised.add(weiAmount).sub(cap);
-      weiAmount = cap.sub(weiRaised);
+    // calculate token amount to be bought
+    uint256 tokens = weiAmount.div(rate());
+    if(tokenSold.add(tokens)>tokenCap) {
+      tokens = tokenCap.sub(tokenSold);
     }
 
-    // calculate token amount to be bought
-    uint256 tokens = weiAmount.div(rate);
+    weiAmountConsumed = tokens.mul(rate());
+    weiExcess = weiAmount.sub(weiAmountConsumed);
+
 
     // update state
-    weiRaised = weiRaised.add(weiAmount);
+    weiRaised = weiRaised.add(weiAmountConsumed);
+    tokenSold = tokenSold.add(tokens);
 
     purchasedTokens[beneficiary] += tokens;
-    receivedFunds[msg.sender] += weiAmount;
+    receivedFunds[msg.sender] += weiAmountConsumed;
     if(weiExcess>0) {
       msg.sender.transfer(weiExcess);
     }
@@ -152,14 +160,22 @@ contract Presale is Haltable {
     require(token.transfer(withdrawAddress, _amount));
   }
 
+  function rate() public constant returns (uint256) {
+    if (block.timestamp < startTime) return 0;
+    else if (block.timestamp >= startTime && block.timestamp < (startTime + 1 weeks)) return uint256(default_rate/2);
+    else if (block.timestamp >= (startTime+1 weeks) && block.timestamp < (startTime + 2 weeks)) return uint256(10*default_rate/19);
+    else if (block.timestamp >= (startTime+2 weeks) && block.timestamp < (startTime + 3 weeks)) return uint256(10*default_rate/18);
+    return 0;
+  }
+
   //It is function and not variable, thus it can't be stale
   function getState() public constant returns (State) {
     if(finalized) return State.Finalized;
     if(!initiated) return State.Prepairing;
     else if (block.timestamp < startTime) return State.PreFunding;
-    else if (block.timestamp <= endTime && weiRaised<cap) return State.Funding;
-    else if (weiRaised>=cap) return State.Success;
-    else if (weiRaised > 0 && block.timestamp >= endTime && weiRaised<cap) return State.Refunding;
+    else if (block.timestamp <= endTime && tokenSold<tokenCap) return State.Funding;
+    else if (tokenSold>=tokenCap) return State.Success;
+    else if (weiRaised > 0 && block.timestamp >= endTime && tokenSold<tokenCap) return State.Refunding;
     else return State.Failure;
   }
 
