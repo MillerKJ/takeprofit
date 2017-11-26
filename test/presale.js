@@ -62,7 +62,10 @@ contract('Presale', function(accounts) {
 
   let start_time = 1511892000; // 28 November 6 pm
   let finish_time = 1513641600; // 19 December
-  let rate = 1e6*1e8/(2e3*1e18);
+  let default_rate = 10*1e6*1e8/(2e3*1e18);
+  let first_week_rate = 2*default_rate;
+  let second_week_rate = 1./Math.floor(1/(1.9*default_rate));
+  let third_week_rate = 1./Math.floor(1/(1.8*default_rate));
 
   var token, presale;
   
@@ -140,28 +143,47 @@ contract('Presale', function(accounts) {
     funding_snapshot = await getSnapshot();
   });
 
-  it("should correctly accept payments", async function() {
+  it("should correctly accept payments at first week", async function() {
     await revertToSnapshot(funding_snapshot);
     var amount1 = 1e18;
     var amount2 = 2.22e18;
     await presale.sendTransaction({value:amount1, from:nonowner1});
     await presale.buyTokens(nonowner2,{from:nonowner1, value:amount2});
     await expectThrow(presale.sendTransaction({value:0.0099*1e18, from:nonowner1}));
-    assert.equal((await presale.getPurchasedTokens.call(nonowner1)).toNumber(), amount1 * rate, "Incorrect amount of calculated tokens via ()");
-    assert.equal((await presale.getPurchasedTokens.call(nonowner2)).toNumber(), amount2 * rate , "Incorrect amount of calculated tokens via buyTokens");
+    assert.equal((await presale.getPurchasedTokens.call(nonowner1)).toNumber(), Math.floor(amount1 * first_week_rate), "Incorrect amount of calculated tokens via ()");
+    assert.equal((await presale.getPurchasedTokens.call(nonowner2)).toNumber(), Math.floor(amount2 * first_week_rate), "Incorrect amount of calculated tokens via buyTokens");
   });
 
+  it("should correctly accept payments at second week", async function() {
+    await setBlockchainTime(funding_snapshot, start_time+7*24*3600+1000);
+    var amount1 = 1e18;
+    var amount2 = 2.22e18;
+    await presale.sendTransaction({value:amount1, from:nonowner1});
+    await presale.buyTokens(nonowner2,{from:nonowner1, value:amount2});
+    assert.equal((await presale.getPurchasedTokens.call(nonowner1)).toNumber(), Math.floor(amount1 * second_week_rate), "Incorrect amount of calculated tokens via ()");
+    assert.equal((await presale.getPurchasedTokens.call(nonowner2)).toNumber(), Math.floor(amount2 * second_week_rate), "Incorrect amount of calculated tokens via buyTokens");
+  });
 
-  it("should correctly accept payments near cap", async function() {
+  it("should correctly accept payments at third week", async function() {
+    await setBlockchainTime(funding_snapshot, start_time+2*7*24*3600+1000);
+    var amount1 = 1e18;
+    var amount2 = 2.22e18;
+    await presale.sendTransaction({value:amount1, from:nonowner1});
+    await presale.buyTokens(nonowner2,{from:nonowner1, value:amount2});
+    assert.equal((await presale.getPurchasedTokens.call(nonowner1)).toNumber(), Math.floor(amount1 * third_week_rate), "Incorrect amount of calculated tokens via ()");
+    assert.equal((await presale.getPurchasedTokens.call(nonowner2)).toNumber(), Math.floor(amount2 * third_week_rate) , "Incorrect amount of calculated tokens via buyTokens");
+  });
+
+  it("should correctly accept payments near cap at first week", async function() {
     await revertToSnapshot(funding_snapshot);
 
     initial_balance = await getBalance(nonowner2);
-    await presale.sendTransaction({value:1999*1e18, from:nonowner1});
+    await presale.sendTransaction({value:999*1e18, from:nonowner1});
     tx = await presale.sendTransaction({value:10*1e18, from:nonowner2});
     gasPrice = web3.eth.getTransaction(tx.tx).gasPrice;
-    assert.equal((await presale.getPurchasedTokens.call(nonowner2)).toNumber(), 1e18*rate, "Incorrect amount of calculated tokens for excesses over cap");
+    assert.equal((await presale.getPurchasedTokens.call(nonowner2)).toNumber(), 1e18*first_week_rate, "Incorrect amount of calculated tokens for excesses over cap");
     assert.equal((await presale.getState.call()).toNumber(), 4, "Incorrectly determined state after reaching cap");
-    assert.equal((await getBalance(nonowner2)).toPrecision(25), initial_balance.minus(1000000000000000000).minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).toPrecision(25), "Incorrectly returns excess over cap");
+    assert.equal((await getBalance(nonowner2)).toPrecision(25), initial_balance.minus(1e18).minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).toPrecision(25), "Incorrectly returns excess over cap");
   });
 
   it("should not allow claim, refund and finalize in Funding state", async function() {
@@ -172,25 +194,54 @@ contract('Presale', function(accounts) {
     await expectThrow(presale.finalize({from: owner}));
   });
 
-
-  it("should correctly pass to Success state", async function() {
+  it("should correctly pass to Success state on first week", async function() {
     await revertToSnapshot(funding_snapshot);
 
     initial_balance = await getBalance(nonowner2);
     await presale.sendTransaction({value:2500*1e18, from:nonowner1});
 
-    success_snapshot = await getSnapshot();
+    assert.equal((await presale.getState.call()).toNumber(), 4, "Incorrectly determined state after reaching cap");
+  });
 
+  it("should correctly pass to Success state on second week", async function() {
+    await revertToSnapshot(funding_snapshot);
+    initial_balance = await getBalance(nonowner2);
+    await presale.sendTransaction({value:800*1e18, from:nonowner1});
+    temp_ss = await getSnapshot();
+    await setBlockchainTime(temp_ss, start_time+7*24*3600+1000);
+    await presale.sendTransaction({value:200*1e18, from:nonowner2});
+    assert.equal((await presale.getState.call()).toNumber(), 3, "Incorrectly determined state after replenishing on second week");
+    await presale.sendTransaction({value:11*1e18, from:nonowner2});
+    assert.equal((await presale.getState.call()).toNumber(), 4, "Incorrectly determined state after reaching cap");
+  });
+
+  it("should correctly pass to Success state on third week", async function() {
+    await revertToSnapshot(funding_snapshot);
+    initial_balance = await getBalance(nonowner2);
+    await presale.sendTransaction({value:500*1e18, from:nonowner1});
+    temp_ss = await getSnapshot();
+    await setBlockchainTime(temp_ss, start_time+7*24*3600+1000);
+    await presale.sendTransaction({value:300*1e18, from:nonowner2});
+    assert.equal((await presale.getState.call()).toNumber(), 3, "Incorrectly determined state after replenishing on second week");
+    temp_ss2 = await getSnapshot();
+    await setBlockchainTime(temp_ss2, start_time+2*7*24*3600+1000);
+    await presale.sendTransaction({value:235*1e18, from:nonowner2});
+    assert.equal((await presale.getState.call()).toNumber(), 3, "Incorrectly determined state after reaching cap");
+    await presale.sendTransaction({value:1*1e18, from:nonowner3});
+    assert.equal((await presale.getPurchasedTokens.call(nonowner3)).toNumber(), Math.floor(1e18 * third_week_rate) , "Incorrect amount of calculated tokens via buyTokens");
+    await presale.sendTransaction({value:5*1e18, from:nonowner3});
     assert.equal((await presale.getState.call()).toNumber(), 4, "Incorrectly determined state after reaching cap");
 
-
+    success_snapshot = await getSnapshot();
 
   });
+
 
   it("should not allow claim and refund in Success state", async function() {
     await revertToSnapshot(success_snapshot);
     await expectThrow(presale.claimTokens(nonowner1, {from: owner})); //Not finalized yet
     await expectThrow(presale.refund({from: owner}));
+    await expectThrow(presale.refund({from: nonowner1}));
   });
 
   it("should not accept money in Success state", async function() {
@@ -209,6 +260,7 @@ contract('Presale', function(accounts) {
     expectThrow(presale.buyTokens(accounts[4], {from: accounts[2]}));
     expectThrow(presale.claimTokens(accounts[4], {from: owner}));
     expectThrow(presale.refund({from: owner}));
+    await expectThrow(presale.refund({from: nonowner1}));
     expectThrow(presale.finalize({from: owner})); 
   });
 
@@ -218,7 +270,7 @@ contract('Presale', function(accounts) {
     initial_balance = await getBalance(withdrawer);
     await presale.finalize({from: owner});
     final_balance = await getBalance(withdrawer);
-    assert.equal(initial_balance.plus(2e3*1e18).toString(), final_balance.toString(), "Incorrectly transfer raised money");
+    assert.equal(initial_balance.plus( new web3.BigNumber("1038888690833254970720")).toPrecision(25), final_balance.toPrecision(25), "Incorrectly transfer raised money");
  
   });
 
@@ -232,6 +284,7 @@ contract('Presale', function(accounts) {
     finalized_snapshot = await getSnapshot();
 
     await expectThrow(presale.refund({from: owner}));
+    await expectThrow(presale.refund({from: nonowner1}));
   });
 
   it("should not allow refund in Finalized state", async function() {
@@ -248,6 +301,7 @@ contract('Presale', function(accounts) {
     expectThrow(presale.buyTokens(accounts[4], {from: accounts[2]}));
     expectThrow(presale.claimTokens(accounts[4], {from: owner}));
     expectThrow(presale.refund({from: owner}));
+    await expectThrow(presale.refund({from: nonowner1}));
     expectThrow(presale.finalize({from: owner})); 
   });
 
@@ -256,7 +310,16 @@ contract('Presale', function(accounts) {
 
     initial_token_balance = await token.balanceOf.call(nonowner1);
     await presale.claim({from: nonowner1});
-    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 1e6*1e8, "Incorrectly transfer purchased coins");    
+    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 5*1e6*1e8, "Incorrectly transfer purchased coins");    
+  });
+
+  it("should transfer claimed tokens only once", async function() {
+    await revertToSnapshot(finalized_snapshot);
+
+    initial_token_balance = await token.balanceOf.call(nonowner1);
+    await presale.claim({from: nonowner1});
+    await expectThrow(presale.claim({from: nonowner1}));
+    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 5*1e6*1e8, "Incorrectly transfer purchased coins");    
   });
 
   it("should transfer claimed coins(delegated)", async function() {
@@ -264,15 +327,18 @@ contract('Presale', function(accounts) {
 
     initial_token_balance = await token.balanceOf.call(nonowner1);
     await presale.claimTokens(nonowner1, {from: nonowner2});
-    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 1e6*1e8, "Incorrectly transfer purchased coins");    
+    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 5*1e6*1e8, "Incorrectly transfer purchased coins");    
   });
 
   it("should correctly pass to Refunding state", async function() {
 
     await revertToSnapshot(funding_snapshot);
-    await presale.sendTransaction({value:100e18, from:nonowner1});
+    await presale.sendTransaction({value:new web3.BigNumber(100e18), from:nonowner1});
     now = await getSnapshot();
-    await setBlockchainTime(now, 1513814400);
+    await setBlockchainTime(now, start_time+7*24*3600+1000);
+    await presale.sendTransaction({value: new web3.BigNumber(150e18), from:nonowner2});
+    now = await getSnapshot();
+    await setBlockchainTime(now, finish_time+1000);
     assert.equal((await presale.getState.call()).toNumber(), 7, "Incorrectly determined state after not reaching cap");
     refunding_snapshot = await getSnapshot();
 
@@ -285,11 +351,27 @@ contract('Presale', function(accounts) {
     tx = await presale.refund({from: nonowner1});
     gasPrice = web3.eth.getTransaction(tx.tx).gasPrice;
     final_balance = await getBalance(nonowner1);
-    assert.equal(initial_balance.minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).plus(100*1e18).toString(),
-                 final_balance.toString(), "Incorrectly transfer raised money");
+    assert.equal(initial_balance.minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).plus(100*1e18).toPrecision(25),
+                 final_balance.toPrecision(25), "Incorrectly transfer refund money for first week buyer");
+    initial_balance = await getBalance(nonowner2);
+    console.log(initial_balance.toPrecision(23));
+    tx = await presale.refund({from: nonowner2});
+    gasPrice = web3.eth.getTransaction(tx.tx).gasPrice;
+    console.log(gasPrice.mul(tx.receipt.cumulativeGasUsed));
+    final_balance = await getBalance(nonowner2);
+    console.log(final_balance.toPrecision(23));
+    assert.equal(initial_balance.minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).plus(150*1e18).minus(new web3.BigNumber(150*1e18).mod(Math.floor(1/(1.9*default_rate))) ).toPrecision(25),
+                 final_balance.toPrecision(25), "Incorrectly transfer refund money for second week buyer");
 
   });
 
+
+  it("should allow refund only once", async function() {
+
+    await revertToSnapshot(refunding_snapshot);
+    await presale.refund({from: nonowner1});
+    await expectThrow(presale.refund({from: nonowner1}));
+  });
 
   it("should correctly refund(delegated)", async function() {
 
