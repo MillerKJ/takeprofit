@@ -148,8 +148,16 @@ contract Presale is Haltable {
 
   function finalize() public inState(State.Success) onlyOwner stopInEmergency {
     require(!finalized);
-    withdrawAddress.transfer(weiRaised);
+    require(this.balance==0);
     finalized = true;
+  }
+
+  function withdraw() public  inState(State.Success) onlyOwner stopInEmergency {
+    withdrawAddress.transfer(weiRaised);
+  }
+
+  function manualWithdrawal(uint256 _amount) public  inState(State.Success) onlyOwner stopInEmergency {
+    withdrawAddress.transfer(_amount);
   }
 
   function emergencyWithdrawal(uint256 _amount) public onlyOwner onlyInEmergency {
