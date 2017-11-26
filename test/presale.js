@@ -186,12 +186,14 @@ contract('Presale', function(accounts) {
     assert.equal((await getBalance(nonowner2)).toPrecision(25), initial_balance.minus(1e18).minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).toPrecision(25), "Incorrectly returns excess over cap");
   });
 
-  it("should not allow claim, refund and finalize in Funding state", async function() {
+  it("should not allow claim, refund, withdraw and finalize in Funding state", async function() {
     await revertToSnapshot(funding_snapshot);
     await presale.sendTransaction({value:1e18, from:nonowner3});
     await expectThrow(presale.claimTokens(nonowner3, {from: owner}));
     await expectThrow(presale.refund({from: nonowner3}));
     await expectThrow(presale.finalize({from: owner}));
+    await expectThrow(presale.withdraw({from: owner}));
+    await expectThrow(presale.manualWithdrawal(1,{from: owner}));
   });
 
   it("should correctly pass to Success state on first week", async function() {
@@ -264,20 +266,44 @@ contract('Presale', function(accounts) {
     expectThrow(presale.finalize({from: owner})); 
   });
 
-  it("should transfer raised money on finalize", async function() {
+  it("should transfer raised money in Success state", async function() {
     await revertToSnapshot(success_snapshot);
 
     initial_balance = await getBalance(withdrawer);
-    await presale.finalize({from: owner});
+    await expectThrow(presale.withdraw({from:nonowner1}));
+    await presale.withdraw({from:owner});
     final_balance = await getBalance(withdrawer);
     assert.equal(initial_balance.plus( new web3.BigNumber("1038888690833254970720")).toPrecision(25), final_balance.toPrecision(25), "Incorrectly transfer raised money");
  
+  });
+
+
+  it("should transfer (manually) raised money in Success state", async function() {
+    await revertToSnapshot(success_snapshot);
+
+    initial_balance = await getBalance(withdrawer);
+    //await presale.finalize({from: owner});
+    await expectThrow(presale.manualWithdrawal(100, {from:nonowner1}));
+    await presale.manualWithdrawal(100, {from:owner});
+    await presale.manualWithdrawal(200, {from:owner});
+    final_balance = await getBalance(withdrawer);
+    assert.equal(initial_balance.plus(300).toPrecision(25), final_balance.toPrecision(25), "Incorrectly transfer raised money");
+ 
+  });
+
+  it("should not allow pass to Finalized state if funds are not withdrawn", async function() {
+    await revertToSnapshot(success_snapshot);
+
+    await expectThrow(presale.finalize({from: nonowner1}));
+    await expectThrow(presale.finalize({from: owner}));
   });
 
   it("should correctly pass to Finalized state", async function() {
     await revertToSnapshot(success_snapshot);
 
     await expectThrow(presale.finalize({from: nonowner1}));
+    await presale.manualWithdrawal(100, {from:owner});
+    await presale.manualWithdrawal(await getBalance(presale.address), {from:owner});
     await presale.finalize({from: owner});
     assert.equal((await presale.getState.call()).toNumber(), 6, "Incorrectly determined state after finalization");
 
@@ -354,12 +380,9 @@ contract('Presale', function(accounts) {
     assert.equal(initial_balance.minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).plus(100*1e18).toPrecision(25),
                  final_balance.toPrecision(25), "Incorrectly transfer refund money for first week buyer");
     initial_balance = await getBalance(nonowner2);
-    console.log(initial_balance.toPrecision(23));
     tx = await presale.refund({from: nonowner2});
     gasPrice = web3.eth.getTransaction(tx.tx).gasPrice;
-    console.log(gasPrice.mul(tx.receipt.cumulativeGasUsed));
     final_balance = await getBalance(nonowner2);
-    console.log(final_balance.toPrecision(23));
     assert.equal(initial_balance.minus(gasPrice.mul(tx.receipt.cumulativeGasUsed)).plus(150*1e18).minus(new web3.BigNumber(150*1e18).mod(Math.floor(1/(1.9*default_rate))) ).toPrecision(25),
                  final_balance.toPrecision(25), "Incorrectly transfer refund money for second week buyer");
 
