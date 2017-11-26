@@ -62,7 +62,7 @@ contract('Presale', function(accounts) {
 
   let start_time = 1511892000; // 28 November 6 pm
   let finish_time = 1513641600; // 19 December
-  let default_rate = 10*1e6*1e8/(2e3*1e18);
+  let default_rate = 8*1e6*1e8/(2e3*1e18);
   let first_week_rate = 2*default_rate;
   let second_week_rate = 1./Math.floor(1/(1.9*default_rate));
   let third_week_rate = 1./Math.floor(1/(1.8*default_rate));
@@ -114,7 +114,7 @@ contract('Presale', function(accounts) {
 
   it("should return excess of tokens to withdrawer", async function() {
     await revertToSnapshot(compiled_snapshot);
-    await token.transfer(presale.address, (new web3.BigNumber(10*1e6*1e8)).plus(10),{from: token_owner});
+    await token.transfer(presale.address, (new web3.BigNumber(8*1e6*1e8)).plus(10),{from: token_owner});
     await presale.initiate({from:owner});
     initialised_snapshot = await getSnapshot();
 
@@ -273,7 +273,7 @@ contract('Presale', function(accounts) {
     await expectThrow(presale.withdraw({from:nonowner1}));
     await presale.withdraw({from:owner});
     final_balance = await getBalance(withdrawer);
-    assert.equal(initial_balance.plus( new web3.BigNumber("1038888690833254970720")).toPrecision(25), final_balance.toPrecision(25), "Incorrectly transfer raised money");
+    assert.equal(initial_balance.plus( new web3.BigNumber("1038888622000031960129")).toPrecision(25), final_balance.toPrecision(25), "Incorrectly transfer raised money");
  
   });
 
@@ -336,7 +336,7 @@ contract('Presale', function(accounts) {
 
     initial_token_balance = await token.balanceOf.call(nonowner1);
     await presale.claim({from: nonowner1});
-    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 5*1e6*1e8, "Incorrectly transfer purchased coins");    
+    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 4*1e6*1e8, "Incorrectly transfer purchased coins");    
   });
 
   it("should transfer claimed tokens only once", async function() {
@@ -345,7 +345,7 @@ contract('Presale', function(accounts) {
     initial_token_balance = await token.balanceOf.call(nonowner1);
     await presale.claim({from: nonowner1});
     await expectThrow(presale.claim({from: nonowner1}));
-    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 5*1e6*1e8, "Incorrectly transfer purchased coins");    
+    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 4*1e6*1e8, "Incorrectly transfer purchased coins");    
   });
 
   it("should transfer claimed coins(delegated)", async function() {
@@ -353,7 +353,7 @@ contract('Presale', function(accounts) {
 
     initial_token_balance = await token.balanceOf.call(nonowner1);
     await presale.claimTokens(nonowner1, {from: nonowner2});
-    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 5*1e6*1e8, "Incorrectly transfer purchased coins");    
+    assert.equal((await token.balanceOf.call(nonowner1)).minus(initial_token_balance).toNumber(), 4*1e6*1e8, "Incorrectly transfer purchased coins");    
   });
 
   it("should correctly pass to Refunding state", async function() {
