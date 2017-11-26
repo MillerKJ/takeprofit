@@ -22,13 +22,13 @@ contract Presale is Haltable {
   uint256 constant public startTime = 1511892000; // 28 Nov 2017 @ 18:00   (UTC)
   uint256 constant public endTime =   1513641600; // 19 Dec 2017 @ 12:00am (UTC)
 
-  uint256 constant public tokenCap = uint256(10*1e6*1e8);
+  uint256 constant public tokenCap = uint256(8*1e6*1e8);
 
   // address where funds will be transfered
   address public withdrawAddress;
 
   // how many weis buyer need to pay for one token unit
-  uint256 public default_rate = 2000000;
+  uint256 public default_rate = 2500000;
 
   // amount of raised money in wei
   uint256 public weiRaised;
@@ -67,10 +67,10 @@ contract Presale is Haltable {
   }
 
   function initiate() public onlyOwner {
-    require(token.balanceOf(this) >= 10*uint256(10)**(6+8));
+    require(token.balanceOf(this) >= tokenCap);
     initiated = true;
-    if(token.balanceOf(this)>10*uint256(10)**(6+8))
-      require(token.transfer(withdrawAddress, token.balanceOf(this).sub(10*uint256(10)**(6+8))));
+    if(token.balanceOf(this)>tokenCap)
+      require(token.transfer(withdrawAddress, token.balanceOf(this).sub(tokenCap)));
   }
 
   // fallback function can be used to buy tokens
