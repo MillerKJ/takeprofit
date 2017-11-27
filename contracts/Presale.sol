@@ -111,7 +111,7 @@ contract Presale is Haltable {
 
   // @return true if the transaction can buy tokens
   function validPurchase() internal constant returns (bool) {
-    bool valuablePurchase = (msg.value > 0.01 ether);
+    bool valuablePurchase = (msg.value >= 0.1 ether);
     return valuablePurchase;
   }
 
