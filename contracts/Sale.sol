@@ -19,7 +19,7 @@ contract Sale is Haltable {
   Token public token;
 
   // start and end timestamps where investments are allowed (both inclusive)
-  uint256 constant public startTime = 1520272800+68000; // 5 march 2017 @ 18:00   (UTC)
+  uint256 constant public startTime = 1520272800; // 5 march 2017 @ 18:00   (UTC)
   uint256 constant public endTime =   1521503999; // 19 march 2017 @ 12:00am (UTC)
 
   uint256 constant public tokenCap = uint256(18*1e6*1e8);

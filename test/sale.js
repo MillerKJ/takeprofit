@@ -60,7 +60,7 @@ contract('Sale', function(accounts) {
   let nonowner2 = accounts[4];
   let nonowner3 = accounts[5];
 
-  let start_time = 1520272800+68000; // 5 March 6 pm
+  let start_time = 1520272800; // 5 March 6 pm
   let finish_time = 1521503999; // 19 March
   let default_rate = 8*1e6*1e8/(2e3*1e18);
   let first_period_rate = 1./Math.floor(1/(1.5*default_rate));
